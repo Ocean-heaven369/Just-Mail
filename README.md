@@ -117,7 +117,7 @@ Git is used to download the project from GitHub.
 Open **Command Prompt / Terminal** and run:
 
 ```
-git clone https://github.com/username/just-mail-project.git
+git clone https://github.com/Ocean-heaven369/Just-Mail.git
 ```
 
 After downloading, move into the project folder:
