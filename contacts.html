@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Contacts - Just Mail</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .contact-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid #eee;
+            background: white;
+            border-radius: 6px;
+            margin: 8px 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .contact-email {
+            font-weight: 500;
+        }
+        .delete-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        .delete-btn:hover {
+            background: #c0392b;
+        }
+        #add-contact-form {
+            margin: 20px 0;
+            display: flex;
+            gap: 12px;
+        }
+        #new-contact-email {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
+        #add-btn {
+            padding: 10px 20px;
+            background: #2ecc71;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        #add-btn:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <h2>📧 Just Mail</h2>
+    <a href="inbox.html">Inbox</a>
+    <a href="sent.html">Sent</a>
+    <a href="compose.html">Compose</a>
+    <a href="contacts.html">Contacts</a>
+    <a href="#" id="logout-link">Logout</a>
+</div>
+
+<div class="content">
+    <h2>Contacts</h2>
+
+    <div id="add-contact-form">
+        <input type="email" id="new-contact-email" placeholder="Add new contact email">
+        <button id="add-btn">Add Contact</button>
+    </div>
+
+    <div id="contactList"></div>
+</div>
+
+<script type="module">
+    import * as api from "./js/api.js";
+    import { showToast } from "./js/ui.js";
+
+    if (!api.isLoggedIn()) {
+        api.logout();
+    }
+
+    const contactList = document.getElementById("contactList");
+    const newEmailInput = document.getElementById("new-contact-email");
+    const addBtn = document.getElementById("add-btn");
+
+    async function loadContacts() {
+        contactList.innerHTML = '<div style="text-align:center; padding:60px;">Loading contacts...</div>';
+
+        try {
+            const contacts = await api.getContacts();
+
+            contactList.innerHTML = contacts.length === 0
+                ? '<p style="text-align:center; padding:40px; color:#7f8c8d;">No contacts yet. Add some!</p>'
+                : '';
+
+            contacts.forEach(email => {
+                const item = document.createElement("div");
+                item.className = "contact-item";
+
+                item.innerHTML = `
+                    <span class="contact-email">${email}</span>
+                    <button class="delete-btn" data-email="${email}">Delete</button>
+                `;
+
+                item.querySelector(".delete-btn").addEventListener("click", async () => {
+                    if (!confirm(`Remove ${email} from contacts?`)) return;
+
+                    try {
+                        await api.removeContact(email);
+                        item.remove();
+                        showToast(`Removed ${email}`, "success");
+                    } catch (err) {
+                        showToast("Failed to remove contact", "error");
+                    }
+                });
+
+                contactList.appendChild(item);
+            });
+        } catch (err) {
+            contactList.innerHTML = '<p style="color:#e74c3c; text-align:center; padding:60px;">Failed to load contacts</p>';
+            showToast("Could not load contacts", "error");
+        }
+    }
+
+    // Add new contact
+    addBtn.addEventListener("click", async () => {
+        const email = newEmailInput.value.trim();
+        if (!email) {
+            showToast("Enter an email address", "error");
+            return;
+        }
+
+        if (!email.includes("@")) {
+            showToast("Invalid email format", "error");
+            return;
+        }
+
+        addBtn.disabled = true;
+        addBtn.textContent = "Adding...";
+
+        try {
+            await api.addContact(email);
+            showToast(`Added ${email}`, "success");
+            newEmailInput.value = "";
+            loadContacts(); // refresh list
+        } catch (err) {
+            showToast("Failed to add contact", "error");
+        } finally {
+            addBtn.disabled = false;
+            addBtn.textContent = "Add Contact";
+        }
+    });
+
+    // Allow pressing Enter to add
+    newEmailInput.addEventListener("keypress", e => {
+        if (e.key === "Enter") {
+            addBtn.click();
+        }
+    });
+
+    // Logout
+    document.getElementById("logout-link").addEventListener("click", e => {
+        e.preventDefault();
+        api.logout();
+    });
+
+    // Load contacts when page opens
+    loadContacts();
+</script>
+
+</body>
+</html>

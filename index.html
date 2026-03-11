@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Just Mail - Login</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="auth-body">
+
+<div class="auth-container">
+    <h1>📧 Just Mail</h1>
+    <h2>Welcome Back</h2>
+
+    <input type="email" id="loginEmail" placeholder="Enter Email">
+    <input type="password" id="loginPassword" placeholder="Enter Password">
+
+    <button onclick="login()">Login</button>
+
+    <p>Don't have an account?</p>
+    <a href="register.html">Create Account</a>
+</div>
+
+<script type="module">
+  import * as api from "./js/api.js";
+
+  const emailEl = document.getElementById("loginEmail");
+  const passEl  = document.getElementById("loginPassword");
+  const btn     = document.querySelector("button");
+
+  async function doLogin() {
+    const email = emailEl.value.trim();
+    const pass  = passEl.value;
+
+    if (!email || !pass) {
+      showToast("Enter email + password");
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = "Logging in...";
+
+    try {
+      await api.login(email, pass);
+      window.location.href = "inbox.html";
+    } catch (err) {
+      showToast("Login failed: " + err.message, "error");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Login";
+    }
+  }
+
+  btn.addEventListener("click", doLogin);
+</script>
+</body>
+</html>

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Just Mail - Compose</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="sidebar">
+    <h2>📧 Just Mail</h2>
+    <a href="inbox.html">Inbox</a>
+    <a href="sent.html">Sent</a>
+    <a href="compose.html">Compose</a>
+    <a href="contacts.html">Contacts</a>
+    <a href="#" id="logout-link">Logout</a>
+</div>
+
+<div class="content">
+    <h2>Compose Mail</h2>
+
+    <input type="text" id="to" placeholder="To (email)">
+    <input type="text" id="subject" placeholder="Subject">
+    <textarea id="message" placeholder="Write your message..." rows="12"></textarea>
+
+    <button id="send-btn">Send</button>
+</div>
+
+<script type="module">
+    import * as api from "./js/api.js";
+    import { showToast } from "./js/ui.js";
+
+    if (!api.isLoggedIn()) {
+        api.logout();
+    }
+
+    const toInput      = document.getElementById("to");
+    const subjectInput = document.getElementById("subject");
+    const messageInput = document.getElementById("message");
+    const sendBtn      = document.getElementById("send-btn");
+
+    function updateSendButtonState() {
+        const filled = toInput.value.trim() && subjectInput.value.trim() && messageInput.value.trim();
+        sendBtn.disabled = !filled;
+    }
+
+    async function handleSend() {
+        const to      = toInput.value.trim();
+        const subject = subjectInput.value.trim();
+        const message = messageInput.value.trim();
+
+        if (!to || !subject || !message) {
+            showToast("Please fill all fields", "error");
+            return;
+        }
+
+        sendBtn.disabled = true;
+        sendBtn.textContent = "Sending...";
+
+        try {
+            await api.sendMail({ to, subject, message });
+            showToast("Mail sent successfully! 🚀", "success");
+            window.location.href = "sent.html";
+        } catch (err) {
+            console.error(err);
+            showToast("Failed to send email: " + err.message, "error");
+        } finally {
+            sendBtn.disabled = false;
+            sendBtn.textContent = "Send";
+        }
+    }
+
+    // Event listeners
+    sendBtn.addEventListener("click", handleSend);
+    toInput.addEventListener("input", updateSendButtonState);
+    subjectInput.addEventListener("input", updateSendButtonState);
+    messageInput.addEventListener("input", updateSendButtonState);
+
+    // Logout
+    document.getElementById("logout-link").addEventListener("click", e => {
+        e.preventDefault();
+        api.logout();
+    });
+
+    // Initial state
+    updateSendButtonState();
+</script>
+
+</body>
+</html>

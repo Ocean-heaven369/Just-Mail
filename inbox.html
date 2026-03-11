@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Just Mail - Inbox</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="sidebar">
+    <h2>📧 Just Mail</h2>
+    <a href="inbox.html">Inbox</a>
+    <a href="sent.html">Sent</a>
+    <a href="compose.html">Compose</a>
+    <a href="contacts.html">Contacts</a>
+    <a href="index.html" onclick="logout()">Logout</a>
+</div>
+
+<div class="content">
+    <h2>Inbox</h2>
+    <button onclick="loadInbox()">Refresh</button>
+    <div id="mailList"></div>
+</div>
+
+<script type="module">
+  import * as api from "./js/api.js";
+
+  if (!api.isLoggedIn()) {
+    api.logout();
+  }
+
+  const mailList = document.getElementById("mailList");
+  const refreshBtn = document.querySelector("button[onclick]") || document.querySelector("button");
+
+  async function loadInbox() {
+    mailList.innerHTML = `
+      <div style="text-align:center; padding: 40px;">
+        <p>Loading your inbox...</p>
+        <div style="border: 4px solid #f3f3f3; border-top: 4px solid #667eea; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto;"></div>
+      </div>
+    `;
+
+    // Add this keyframe if you want real spinner (put in <style> or keep css)
+    // @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    try {
+      const mails = await api.getInbox(1);  // page 1 for now
+
+      mailList.innerHTML = "";
+
+      if (mails.length === 0) {
+        mailList.innerHTML = `
+          <div class="mail">
+            <h3>Your inbox is empty 📭</h3>
+            <p>Send or receive some mails to see them here.</p>
+          </div>
+        `;
+        return;
+      }
+
+      mails.forEach(mail => {
+        const div = document.createElement("div");
+        div.className = "mail";
+        div.innerHTML = `
+          <h3>${mail.subject || "(No subject)"}</h3>
+          /* Add to style.css if you want (optional) */
+              .mail.unread {
+             background: #e8f4fd;
+             border-left: 4px solid #667eea;
+             font-weight: 600;
+              }
+          <small><strong>From:</strong> ${mail.sender} | ${new Date(mail.timestamp).toLocaleString()}</small>
+          <p style="display:none;">${mail.message}</p>
+        `;
+        div.addEventListener("click", () => {
+          const p = div.querySelector("p");
+          p.style.display = p.style.display === "none" ? "block" : "none";
+        });
+        mailList.appendChild(div);
+      });
+    } catch (err) {
+      console.error(err);
+      mailList.innerHTML = `
+        <div style="color: #e74c3c; text-align:center; padding: 40px;">
+          <h3>Oops! Something went wrong</h3>
+          <p>${err.message || "Cannot load inbox right now"}</p>
+          <button onclick="location.reload()">Try Again</button>
+        </div>
+      `;
+    }
+  }
+// When rendering mails
+mails.forEach(mail => {
+  const div = document.createElement("div");
+  div.className = `mail ${mail.is_read ? '' : 'unread'}`;
+  div.dataset.id = mail.id;
+  // ... rest of content
+
+  div.addEventListener("click", async () => {
+    if (!mail.is_read) {
+      try {
+        await api.markAsRead(mail.id);
+        div.classList.remove("unread");
+        // Optional: refresh unread badge in sidebar
+      } catch (err) {
+        showToast("Failed to mark as read", "error");
+      }
+    }
+    // toggle message visibility...
+    const p = div.querySelector("p");
+    p.style.display = p.style.display === "none" ? "block" : "none";
+  });
+});
+  refreshBtn.addEventListener("click", loadInbox);
+  window.addEventListener("load", loadInbox);
+</script>
+
+</body>
+</html>

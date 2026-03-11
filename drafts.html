@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Drafts - Just Mail</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="sidebar">
+    <h2>📧 Just Mail</h2>
+    <a href="inbox.html">Inbox</a>
+    <a href="sent.html">Sent</a>
+    <a href="drafts.html">Drafts</a>
+    <a href="trash.html">Trash</a>
+    <a href="compose.html">Compose</a>
+    <a href="contacts.html">Contacts</a>
+    <a href="#" id="logout-link">Logout</a>
+</div>
+
+<div class="content">
+    <h2>Drafts</h2>
+    <div id="draftList"></div>
+</div>
+
+<script type="module">
+    import * as api from "./js/api.js";
+    import { showToast } from "./js/ui.js";
+
+    if (!api.isLoggedIn()) api.logout();
+
+    const draftList = document.getElementById("draftList");
+
+    async function loadDrafts() {
+        draftList.innerHTML = '<div style="text-align:center;padding:60px;">Loading drafts...</div>';
+
+        try {
+            // You need to add getDrafts() to api.js first (see below)
+            const drafts = await api.getDrafts();
+
+            draftList.innerHTML = drafts.length === 0
+                ? '<p style="text-align:center;padding:40px;">No drafts saved yet ✍️</p>'
+                : '';
+
+            drafts.forEach(draft => {
+                const div = document.createElement("div");
+                div.className = "mail";
+                div.innerHTML = `
+                    <h3>${draft.subject || "(No subject)"}</h3>
+                    <small>${new Date(draft.timestamp).toLocaleString()}</small>
+                    <p style="margin-top:8px;">${draft.message.substring(0, 120)}${draft.message.length > 120 ? '...' : ''}</p>
+                    <button class="edit-draft" data-id="${draft.id}">Edit</button>
+                `;
+                draftList.appendChild(div);
+
+                div.querySelector(".edit-draft").addEventListener("click", () => {
+                    localStorage.setItem("editDraft", JSON.stringify(draft));
+                    window.location.href = "compose.html";
+                });
+            });
+        } catch (err) {
+            draftList.innerHTML = '<p style="color:#e74c3c;text-align:center;">Failed to load drafts</p>';
+            showToast("Error loading drafts", "error");
+        }
+    }
+
+    document.getElementById("logout-link").addEventListener("click", e => {
+        e.preventDefault();
+        api.logout();
+    });
+
+    loadDrafts();
+</script>
+</body>
+</html>
